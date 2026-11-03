@@ -20,8 +20,10 @@ import {
   setInstancePaused,
   setInstancePixelScale,
   setInstancePreset,
+  setInstanceSpeed,
   setInstanceStrength,
   setInstanceVisible,
+  setSharedFragmentShader,
   updateInstanceSize,
   type Cycle,
   type Instance,
@@ -132,6 +134,7 @@ export const ImageGeneration = forwardRef<ImageGenerationHandle, ImageGeneration
     preset = 'pixels-organic',
     theme = 'auto',
     strength = 1,
+    speed = 1,
     pixelScale = 1,
     cardBg: cardBgProp,
     colors,
@@ -143,6 +146,7 @@ export const ImageGeneration = forwardRef<ImageGenerationHandle, ImageGeneration
     revealFadeOutMs = 300,
     borderRadius,
     paused = false,
+    fragmentShader,
     onCycle,
     excludeSrcs,
     className,
@@ -328,6 +332,7 @@ export const ImageGeneration = forwardRef<ImageGenerationHandle, ImageGeneration
       cssHeight: initial.h,
       preset: presetMode,
       strength,
+      speed,
       cardBg: cardBgProp ?? null,
       pixelScale
     });
@@ -511,6 +516,13 @@ export const ImageGeneration = forwardRef<ImageGenerationHandle, ImageGeneration
     }
   }, [strength]);
 
+  // Sync speed — scales the instance's animation clock, no repaint needed.
+  useEffect(() => {
+    const i = instanceRef.current;
+    if (!i) return;
+    setInstanceSpeed(i, speed);
+  }, [speed]);
+
   // Sync pixelScale (recomputes the mosaic grid density) and repaint once so
   // the change is visible immediately even while paused.
   useEffect(() => {
@@ -521,6 +533,14 @@ export const ImageGeneration = forwardRef<ImageGenerationHandle, ImageGeneration
   }, [pixelScale]);
 
   // Sync paused.
+  // Custom fragment stage: page-wide while set, back to the bundled one when
+  // this instance drops it or unmounts.
+  useEffect(() => {
+    if (!fragmentShader) return;
+    setSharedFragmentShader(fragmentShader);
+    return () => setSharedFragmentShader(null);
+  }, [fragmentShader]);
+
   useEffect(() => {
     const i = instanceRef.current;
     if (i) setInstancePaused(i, paused);
